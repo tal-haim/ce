@@ -9,8 +9,12 @@ metadata:
     app.kubernetes.io/component: cluster
     {{- include "mlrun-ce.common.labels" . | nindent 4 }}
   annotations:
-    # Delay Kafka CR creation until after CRDs are installed
-    helm.sh/hook: post-install,post-upgrade
+    # Fire only on first install - Kafka is stateful (the KRaft cluster ID lives on the
+    # persistent-claim PVC, which Strimzi does not delete with the CR). A post-upgrade
+    # hook would delete+recreate this CR on every upgrade (Helm hooks are create-only;
+    # the default hook-delete-policy is before-hook-creation), minting a new cluster ID
+    # against the surviving PVC and crash-looping the broker.
+    helm.sh/hook: post-install
     helm.sh/hook-weight: "5"
 spec:
   kafka:
